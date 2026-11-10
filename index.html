@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vokabel-Trainer</title>
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #ffffff; --text: #1d2433; --muted: #6b7489;
+    --primary: #3b6cf6; --primary-dark: #2c55c9; --ok: #1f9d55; --ok-bg: #e3f6ea;
+    --bad: #d64545; --bad-bg: #fde8e8; --warn: #c98a00; --warn-bg: #fff4d6;
+    --border: #dde2ee; --shadow: 0 4px 18px rgba(30, 40, 80, .08);
+    --p1: #e5534b; --p2: #f08c3a; --p3: #f2c230; --p4: #9bc53d; --p5: #3fb27f; --p6: #2f8fd8; --p7: #7b5cd6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141823; --card: #1e2433; --text: #e8ecf5; --muted: #9aa3b8;
+      --primary: #5b86ff; --primary-dark: #4a73e8; --ok: #4cc983; --ok-bg: #173527;
+      --bad: #ff7676; --bad-bg: #3d1e22; --warn: #f0c04a; --warn-bg: #3a3017;
+      --border: #2e3547; --shadow: 0 4px 18px rgba(0, 0, 0, .3);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  header h1 { font-size: 1.35rem; margin: 0; cursor: pointer; }
+  nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  nav button { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 6px 12px; border-radius: 999px; font-size: .9rem; cursor: pointer; }
+  nav button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+  h2 { font-size: 1.1rem; margin: 0 0 12px; }
+  .muted { color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; padding: 12px 20px; font-size: 1rem; font-weight: 600; cursor: pointer; background: var(--primary); color: #fff; }
+  .btn:hover { background: var(--primary-dark); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.big { width: 100%; padding: 16px; font-size: 1.15rem; }
+  .btn.ghost { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+  .btn.ghost:hover { background: rgba(59,108,246,.08); }
+  .btn.ok { background: var(--ok); } .btn.bad { background: var(--bad); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > .btn { flex: 1 1 140px; }
+
+  /* Start screen */
+  .hello { display: flex; align-items: center; gap: 14px; }
+  .hello .emoji { font-size: 2.4rem; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+  .stat { background: var(--bg); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 1.6rem; }
+  .stat span { font-size: .8rem; color: var(--muted); }
+
+  /* Phase boxes */
+  .phases { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 150px; margin-top: 8px; }
+  .phase { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .phase .bar { width: 100%; border-radius: 8px 8px 4px 4px; min-height: 6px; transition: height .4s; }
+  .phase .n { font-weight: 700; font-size: .95rem; margin-bottom: 2px; }
+  .phase .lbl { font-size: .72rem; color: var(--muted); margin-top: 4px; text-align: center; line-height: 1.15; }
+
+  /* Units */
+  .unit { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .unit:first-of-type { border-top: 0; }
+  .unit input { width: 22px; height: 22px; accent-color: var(--primary); }
+  .unit .info { flex: 1; }
+  .minibar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--bg); margin-top: 4px; }
+
+  /* Learning */
+  .progress { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
+  .progress div { height: 100%; background: var(--primary); transition: width .3s; }
+  .qcard { text-align: center; padding: 28px 20px; }
+  .qcard .dir { font-size: .85rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .qcard .word { font-size: 2rem; font-weight: 700; margin: 10px 0 4px; word-break: break-word; }
+  .qcard .badge { display: inline-block; font-size: .78rem; padding: 2px 10px; border-radius: 999px; color: #fff; font-weight: 600; }
+  .speak { background: none; border: 0; font-size: 1.5rem; cursor: pointer; vertical-align: middle; }
+  .answer { width: 100%; font-size: 1.3rem; padding: 14px; border-radius: 12px; border: 2px solid var(--border); background: var(--bg); color: var(--text); text-align: center; margin-top: 18px; }
+  .answer:focus { outline: none; border-color: var(--primary); }
+  .umlauts { display: flex; justify-content: center; gap: 6px; margin: 10px 0 16px; }
+  .umlauts button { width: 42px; height: 38px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 1.1rem; cursor: pointer; }
+  .feedback { border-radius: 14px; padding: 14px; margin: 16px 0; text-align: center; }
+  .feedback.ok { background: var(--ok-bg); color: var(--ok); }
+  .feedback.bad { background: var(--bad-bg); color: var(--bad); }
+  .feedback.warn { background: var(--warn-bg); color: var(--warn); }
+  .feedback .big { font-size: 1.3rem; font-weight: 700; }
+  .feedback .sol { color: var(--text); font-size: 1.25rem; margin-top: 6px; }
+  .feedback .yours { color: var(--muted); font-size: .95rem; text-decoration: line-through; }
+  .newtag { display: inline-block; background: var(--p3); color: #3a2c00; font-weight: 700; padding: 3px 12px; border-radius: 999px; font-size: .85rem; }
+  .pair { font-size: 1.6rem; font-weight: 700; margin: 14px 0; }
+  .pair .sep { color: var(--muted); font-weight: 400; margin: 0 8px; }
+
+  /* Lists / table */
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  th { font-size: .8rem; color: var(--muted); text-transform: uppercase; }
+  .dot { display: inline-block; width: 26px; height: 26px; line-height: 26px; text-align: center; border-radius: 50%; color: #fff; font-weight: 700; font-size: .85rem; }
+  label.opt { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; }
+  label.opt input { width: 20px; height: 20px; accent-color: var(--primary); }
+  input[type=text], select { font-size: 1rem; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); width: 100%; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .center { text-align: center; }
+  .confetti { font-size: 3rem; }
+  @media (max-width: 520px) {
+    header { flex-direction: column; align-items: flex-start; }
+    .qcard .word { font-size: 1.6rem; }
+    .phase .lbl { font-size: .62rem; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 onclick="show('start')">📚 Vokabel-Trainer</h1>
+    <nav id="nav">
+      <button data-v="start">Start</button>
+      <button data-v="kartei">Kartei</button>
+      <button data-v="eigene">+ Wörter</button>
+      <button data-v="einstellungen">Einstellungen</button>
+    </nav>
+  </header>
+  <main id="app"></main>
+</div>
+
+<script src="vokabeln.js"></script>
+<script>
+/* ================================================================
+   Lernsystem nach dem 6-Phasen-Prinzip (Karteikasten / Spaced Repetition)
+   - Jede Vokabel startet in Phase 1.
+   - Gewusst  -> eine Phase weiter, nächste Abfrage erst nach einer Pause.
+   - Nicht gewusst -> zurück in Phase 1 und in dieser Runde nochmal.
+   - Nach Phase 6 ist das Wort im Langzeitgedächtnis.
+   ================================================================ */
+
+const PAUSE_TAGE = { 1: 0, 2: 1, 3: 2, 4: 5, 5: 10, 6: 30 }; // Tage bis zur nächsten Abfrage
+const PHASE_NAMEN = ["", "Phase 1", "Phase 2", "Phase 3", "Phase 4", "Phase 5", "Phase 6", "Gelernt"];
+const PHASE_FARBE = i => `var(--p${i})`;
+const SPEICHER = "vokabeltrainer-v1";
+
+/* ---------- Speichern / Laden ---------- */
+function laden() {
+  try { return JSON.parse(localStorage.getItem(SPEICHER)) || {}; } catch { return {}; }
+}
+let state = Object.assign({
+  karten: {},                 // id -> { phase, faellig, richtig, falsch, gesehen }
+  aktiv: null,                // Liste aktiver Lektions-IDs
+  richtung: "de-en",          // de-en | en-de | mix
+  eigene: [],                 // selbst hinzugefügte Wörter
+  serie: 0, letzterTag: null, // Lern-Serie in Tagen
+  heuteGelernt: 0, heuteTag: null,
+  vorlesen: true,
+  neuZeigen: true,            // neue Vokabeln vor der ersten Abfrage mit Übersetzung zeigen
+}, laden());
+
+function speichern() {
+  try { localStorage.setItem(SPEICHER, JSON.stringify(state)); } catch {}
+}
+
+/* ---------- Datum ---------- */
+function heute(offset = 0) {
+  const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+function tageBis(datum) {
+  return Math.round((new Date(datum + "T12:00:00") - new Date(heute() + "T12:00:00")) / 864e5);
+}
+
+/* ---------- Lektionen & Wörter ---------- */
+function alleLektionen() {
+  const l = [...window.LEKTIONEN];
+  if (state.eigene.length) l.push({ id: "eigene", titel: "Meine eigenen Wörter", woerter: state.eigene });
+  return l;
+}
+function wortId(lek, w) { return lek.id + "::" + w.en; }
+function alleWoerter() {
+  const out = [];
+  for (const lek of alleLektionen())
+    for (const w of lek.woerter) out.push({ ...w, id: wortId(lek, w), lektion: lek.id });
+  return out;
+}
+function aktiveLektionen() {
+  const alle = alleLektionen().map(l => l.id);
+  if (!state.aktiv) state.aktiv = [...alle];
+  // Neu hinzugekommene Lektionen automatisch einschalten
+  if (!state.bekannt) state.bekannt = [...state.aktiv];
+  for (const id of alle) if (!state.bekannt.includes(id)) { state.bekannt.push(id); state.aktiv.push(id); }
+  return state.aktiv;
+}
+function karte(id) {
+  if (!state.karten[id]) state.karten[id] = { phase: 1, faellig: heute(), richtig: 0, falsch: 0, gesehen: false };
+  return state.karten[id];
+}
+function faelligeWoerter() {
+  const akt = aktiveLektionen();
+  return alleWoerter().filter(w => {
+    if (!akt.includes(w.lektion)) return false;
+    const k = karte(w.id);
+    return k.phase <= 6 && k.faellig <= heute();
+  });
+}
+
+/* ---------- Antwort prüfen ---------- */
+function normal(s) {
+  return s.toLowerCase()
+    .replace(/[’`´]/g, "'")
+    .replace(/…|\.\.\./g, " ")
+    .replace(/[?!.,;:]/g, " ")
+    .replace(/\s*[-–—]\s*/g, "-")
+    .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+    .replace(/\s+/g, " ").trim();
+}
+function ohneArtikel(s) {
+  return s.replace(/^(der|die|das|ein|eine|the|a|an) /, "");
+}
+function erlaubte(w, sprache) {
+  const anzeige = sprache === "en" ? w.en : w.de;
+  const liste = [anzeige, ...((sprache === "en" ? w.enOk : w.deOk) || [])];
+  const set = new Set();
+  for (const a of liste) { const n = normal(a); set.add(n); set.add(ohneArtikel(n)); }
+  return set;
+}
+function abstand(a, b) { // Levenshtein
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+// Ergebnis: "richtig" | "tippfehler" | "falsch"
+function pruefe(eingabe, w, sprache) {
+  const ok = erlaubte(w, sprache);
+  const ganzeEingabe = normal(eingabe);
+  if (ok.has(ganzeEingabe) || ok.has(ohneArtikel(ganzeEingabe))) return "richtig";
+  // Mehrere Bedeutungen mit Komma getrennt: jede muss stimmen
+  const teile = eingabe.split(/[,/]/).map(normal).filter(Boolean);
+  if (!teile.length) return "falsch";
+  if (teile.every(t => ok.has(t) || ok.has(ohneArtikel(t)))) return "richtig";
+  const ganz = ohneArtikel(normal(eingabe));
+  for (const a of ok) if (a.length >= 4 && abstand(ganz, a) === 1) return "tippfehler";
+  return "falsch";
+}
+
+/* ---------- Vorlesen ---------- */
+function sprich(text) {
+  if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/…/g, ""));
+  u.lang = "en-GB"; u.rate = 0.85;
+  const v = speechSynthesis.getVoices().find(v => v.lang.startsWith("en-GB")) || speechSynthesis.getVoices().find(v => v.lang.startsWith("en"));
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+/* ---------- Ansichten ---------- */
+const app = document.getElementById("app");
+let ansicht = "start";
+function show(v) {
+  ansicht = v;
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.v === v));
+  ({ start: zeigeStart, kartei: zeigeKartei, eigene: zeigeEigene, einstellungen: zeigeEinstellungen })[v]();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("#nav button").forEach(b => b.onclick = () => show(b.dataset.v));
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function phasenZaehlen(woerter) {
+  const z = [0, 0, 0, 0, 0, 0, 0, 0];
+  for (const w of woerter) z[karte(w.id).phase]++;
+  return z;
+}
+
+function serieAktuell() {
+  if (!state.letzterTag) return 0;
+  return tageBis(state.letzterTag) >= -1 ? state.serie : 0;
+}
+
+/* ---- Start ---- */
+function zeigeStart() {
+  const akt = aktiveLektionen();
+  const woerter = alleWoerter().filter(w => akt.includes(w.lektion));
+  const faellig = faelligeWoerter().length;
+  const z = phasenZaehlen(woerter);
+  const max = Math.max(1, ...z.slice(1));
+  const heuteZahl = state.heuteTag === heute() ? state.heuteGelernt : 0;
+  const stunde = new Date().getHours();
+  const gruss = stunde < 11 ? "Guten Morgen!" : stunde < 18 ? "Hallo!" : "Guten Abend!";
+
+  let naechste = "";
+  if (!faellig) {
+    const termine = woerter.map(w => karte(w.id)).filter(k => k.phase <= 6).map(k => k.faellig).sort();
+    if (termine.length) {
+      const t = tageBis(termine[0]);
+      naechste = `Die nächsten Vokabeln sind ${t === 1 ? "morgen" : "in " + t + " Tagen"} wieder dran.`;
+    } else naechste = "Alle Vokabeln sind im Langzeitgedächtnis. Super!";
+  }
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="hello"><div class="emoji">${faellig ? "👋" : "🎉"}</div>
+        <div><b>${gruss}</b><br><span class="muted">${faellig
+          ? `Heute ${faellig === 1 ? "ist <b>1 Vokabel</b>" : `sind <b>${faellig} Vokabeln</b>`} dran.`
+          : "Für heute ist alles geschafft! " + naechste}</span></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>${heuteZahl}</b><span>heute geübt</span></div>
+        <div class="stat"><b>${serieAktuell()} 🔥</b><span>Tage in Folge</span></div>
+        <div class="stat"><b>${z[7]}</b><span>gelernt</span></div>
+      </div>
+      <button class="btn big" id="los" ${faellig ? "" : "disabled"}>▶ Jetzt lernen</button>
+      ${!faellig && woerter.length ? `<div style="margin-top:10px"><button class="btn ghost big" id="extra">Freiwillig üben (zählt nicht für die Phasen)</button></div>` : ""}
+    </div>
+
+    <div class="card">
+      <h2>Dein Karteikasten</h2>
+      <div class="phases">
+        ${z.slice(1).map((n, i) => `
+          <div class="phase">
+            <div class="n">${n}</div>
+            <div class="bar" style="height:${Math.max(4, n / max * 100)}px;background:${PHASE_FARBE(i + 1)}"></div>
+            <div class="lbl">${i < 6 ? "Phase " + (i + 1) : "🧠 Gelernt"}</div>
+          </div>`).join("")}
+      </div>
+      <p class="muted" style="font-size:.85rem;margin-bottom:0">Gewusst → eine Phase weiter. Nicht gewusst → zurück in Phase 1.
+      Je höher die Phase, desto länger die Pause bis zur nächsten Abfrage.</p>
+    </div>
+
+    <div class="card">
+      <h2>Lektionen</h2>
+      ${alleLektionen().map(l => {
+        const ws = l.woerter.map(w => ({ id: wortId(l, w) }));
+        const zz = phasenZaehlen(ws);
+        return `<label class="unit">
+          <input type="checkbox" data-lek="${esc(l.id)}" ${akt.includes(l.id) ? "checked" : ""}>
+          <div class="info"><b>${esc(l.titel)}</b> <span class="muted">· ${l.woerter.length} Wörter</span>
+            <div class="minibar">${zz.slice(1).map((n, i) => n ? `<div style="flex:${n};background:${PHASE_FARBE(i + 1)}"></div>` : "").join("")}</div>
+          </div></label>`;
+      }).join("")}
+    </div>`;
+
+  document.getElementById("los").onclick = () => starteRunde(false);
+  const ex = document.getElementById("extra");
+  if (ex) ex.onclick = () => starteRunde(true);
+  app.querySelectorAll("[data-lek]").forEach(cb => cb.onchange = () => {
+    const id = cb.dataset.lek;
+    state.aktiv = cb.checked ? [...new Set([...aktiveLektionen(), id])] : aktiveLektionen().filter(x => x !== id);
+    speichern(); zeigeStart();
+  });
+}
+
+/* ---- Lernrunde ---- */
+let runde = null;
+
+function mischen(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function starteRunde(freiwillig) {
+  let liste;
+  if (freiwillig) {
+    const akt = aktiveLektionen();
+    liste = mischen(alleWoerter().filter(w => akt.includes(w.lektion))).slice(0, 15);
+  } else {
+    // Niedrige Phasen zuerst, damit Wackelkandidaten dran sind
+    // Höchstens 10 neue Wörter pro Runde, damit es nicht zu viel wird
+    const faellig = mischen(faelligeWoerter());
+    const alt = faellig.filter(w => karte(w.id).gesehen).sort((a, b) => karte(a.id).phase - karte(b.id).phase);
+    const neu = faellig.filter(w => !karte(w.id).gesehen).slice(0, 10);
+    liste = mischen([...alt.slice(0, 25 - neu.length), ...neu]);
+  }
+  runde = { freiwillig, schlange: liste.map(w => ({ w, wiederholung: false })), gesamt: liste.length, erledigt: 0, richtig: 0, falsch: 0, aufgestiegen: 0 };
+  naechsteFrage();
+}
+
+function naechsteFrage() {
+  if (!runde.schlange.length) return zeigeErgebnis();
+  const eintrag = runde.schlange[0];
+  const k = karte(eintrag.w.id);
+  if (!k.gesehen && !runde.freiwillig && state.neuZeigen) return zeigeNeu(eintrag);
+  zeigeFrage(eintrag);
+}
+
+function fortschrittHTML() {
+  const p = runde.gesamt ? runde.erledigt / runde.gesamt * 100 : 0;
+  return `<div class="progress"><div style="width:${p}%"></div></div>`;
+}
+
+function zeigeNeu(eintrag) {
+  const w = eintrag.w;
+  app.innerHTML = `${fortschrittHTML()}
+    <div class="card qcard">
+      <span class="newtag">✨ Neue Vokabel</span>
+      <div class="pair">${esc(w.en)} <button class="speak" title="Vorlesen" id="sp">🔊</button><br>
+        <span class="sep">=</span><br>${esc(w.de)}</div>
+      <p class="muted">Lies das Wort laut, merk dir die Schreibweise – gleich wirst du gefragt.</p>
+      <button class="btn big" id="ok">Hab ich mir gemerkt 👍</button>
+    </div>`;
+  document.getElementById("sp").onclick = () => sprich(w.en);
+  document.getElementById("ok").onclick = () => { karte(w.id).gesehen = true; speichern(); zeigeFrage(eintrag); };
+  document.getElementById("ok").focus();
+  if (state.vorlesen) sprich(w.en);
+}
+
+function richtungFuer() {
+  if (state.richtung === "mix") return Math.random() < .5 ? "de-en" : "en-de";
+  return state.richtung;
+}
+
+function zeigeFrage(eintrag) {
+  const w = eintrag.w;
+  const r = eintrag.richtung || (eintrag.richtung = richtungFuer());
+  const frage = r === "de-en" ? w.de : w.en;
+  const ziel = r === "de-en" ? "en" : "de";
+  const ph = karte(w.id).phase;
+  app.innerHTML = `${fortschrittHTML()}
+    <div class="card qcard">
+      <div class="dir">${r === "de-en" ? "Deutsch → Englisch" : "Englisch → Deutsch"}</div>
+      <div class="word">${esc(frage)} ${r === "en-de" ? `<button class="speak" id="sp" title="Vorlesen">🔊</button>` : ""}</div>
+      <span class="badge" style="background:${PHASE_FARBE(ph)}">${runde.freiwillig ? "Freiwillig" : eintrag.wiederholung ? "Nochmal üben" : PHASE_NAMEN[ph]}</span>
+      <form id="f" autocomplete="off">
+        <input class="answer" id="a" placeholder="${ziel === "en" ? "Englisch eingeben…" : "Deutsch eingeben…"}" autocapitalize="off" autocorrect="off" spellcheck="false">
+        ${ziel === "de" ? `<div class="umlauts">${["ä", "ö", "ü", "ß"].map(c => `<button type="button" data-c="${c}">${c}</button>`).join("")}</div>` : `<div style="height:16px"></div>`}
+        <div class="row">
+          <button type="button" class="btn ghost" id="weiss">Weiß ich nicht</button>
+          <button class="btn" type="submit">Prüfen ✓</button>
+        </div>
+      </form>
+    </div>`;
+  const inp = document.getElementById("a");
+  inp.focus();
+  if (r === "en-de") {
+    document.getElementById("sp").onclick = () => sprich(w.en);
+    if (state.vorlesen) sprich(w.en);
+  }
+  app.querySelectorAll("[data-c]").forEach(b => b.onclick = () => {
+    const s = inp.selectionStart, e = inp.selectionEnd;
+    inp.value = inp.value.slice(0, s) + b.dataset.c + inp.value.slice(e);
+    inp.focus(); inp.setSelectionRange(s + 1, s + 1);
+  });
+  document.getElementById("f").onsubmit = ev => {
+    ev.preventDefault();
+    if (!inp.value.trim()) return inp.focus();
+    zeigeAuswertung(eintrag, inp.value, pruefe(inp.value, w, ziel));
+  };
+  document.getElementById("weiss").onclick = () => zeigeAuswertung(eintrag, "", "falsch");
+}
+
+const LOB = ["Super! 🎉", "Richtig! 👍", "Klasse! ⭐", "Genau! 💪", "Stark! 🚀", "Perfekt! ✨"];
+
+function zeigeAuswertung(eintrag, eingabe, ergebnis) {
+  const w = eintrag.w;
+  const ziel = eintrag.richtung === "de-en" ? "en" : "de";
+  const loesung = ziel === "en" ? w.en : w.de;
+  const ph = karte(w.id).phase;
+  let box;
+  if (ergebnis === "richtig") {
+    const neu = Math.min(7, ph + 1);
+    box = `<div class="feedback ok"><div class="big">${LOB[Math.floor(Math.random() * LOB.length)]}</div>
+      <div class="sol">${esc(loesung)}</div>
+      ${!runde.freiwillig && !eintrag.wiederholung ? `<div style="font-size:.9rem;margin-top:4px">${neu === 7 ? "🧠 Ab ins Langzeitgedächtnis!" : "→ weiter in Phase " + neu}</div>` : ""}</div>`;
+  } else if (ergebnis === "tippfehler") {
+    box = `<div class="feedback warn"><div class="big">Fast! Kleiner Tippfehler 🧐</div>
+      <div class="yours">${esc(eingabe)}</div><div class="sol">${esc(loesung)}</div>
+      <div style="font-size:.9rem;margin-top:4px">Achte genau auf die Schreibweise.</div></div>`;
+  } else {
+    box = `<div class="feedback bad"><div class="big">${eingabe ? "Leider falsch" : "Kein Problem – so heißt es:"}</div>
+      ${eingabe ? `<div class="yours">${esc(eingabe)}</div>` : ""}
+      <div class="sol">${esc(loesung)}</div>
+      ${!runde.freiwillig ? `<div style="font-size:.9rem;margin-top:4px">Das Wort kommt gleich nochmal.</div>` : ""}</div>`;
+  }
+  const frage = eintrag.richtung === "de-en" ? w.de : w.en;
+  app.innerHTML = `${fortschrittHTML()}
+    <div class="card qcard">
+      <div class="word" style="font-size:1.5rem">${esc(frage)}</div>
+      ${box}
+      <div class="row">
+        ${ergebnis !== "richtig" && eingabe ? `<button class="btn ghost" id="recht">Ich hatte doch recht</button>` : ""}
+        <button class="btn" id="weiter">Weiter ➜</button>
+      </div>
+      <div style="margin-top:10px"><button class="speak" id="sp">🔊</button></div>
+    </div>`;
+  document.getElementById("sp").onclick = () => sprich(w.en);
+  if (state.vorlesen && ziel === "en") sprich(w.en);
+  document.getElementById("weiter").onclick = () => bewerte(eintrag, ergebnis === "richtig");
+  document.getElementById("weiter").focus();
+  const recht = document.getElementById("recht");
+  if (recht) recht.onclick = () => bewerte(eintrag, true);
+}
+
+function bewerte(eintrag, gewusst) {
+  const k = karte(eintrag.w.id);
+  k.gesehen = true;
+  runde.schlange.shift();
+
+  if (!runde.freiwillig) {
+    if (gewusst) {
+      if (!eintrag.wiederholung) runde.aufgestiegen++;
+      k.richtig++;
+      k.phase = Math.min(7, k.phase + 1);
+      k.faellig = heute(k.phase <= 6 ? PAUSE_TAGE[k.phase] : 0);
+    } else {
+      k.falsch++;
+      k.phase = 1;
+      k.faellig = heute();
+      // in dieser Runde nochmal – ein paar Karten später
+      const pos = Math.min(runde.schlange.length, 3);
+      runde.schlange.splice(pos, 0, { w: eintrag.w, wiederholung: true });
+    }
+  } else if (!gewusst) {
+    runde.schlange.push({ w: eintrag.w, wiederholung: true });
+  }
+
+  if (!eintrag.wiederholung) {
+    runde.erledigt++;
+    gewusst ? runde.richtig++ : runde.falsch++;
+  }
+
+  // Tageszähler & Serie
+  if (state.heuteTag !== heute()) { state.heuteTag = heute(); state.heuteGelernt = 0; }
+  state.heuteGelernt++;
+  if (state.letzterTag !== heute()) {
+    state.serie = state.letzterTag && tageBis(state.letzterTag) === -1 ? state.serie + 1 : 1;
+    state.letzterTag = heute();
+  }
+  speichern();
+  naechsteFrage();
+}
+
+function zeigeErgebnis() {
+  const r = runde;
+  const quote = r.gesamt ? Math.round(r.richtig / r.gesamt * 100) : 0;
+  const emoji = quote === 100 ? "🏆" : quote >= 80 ? "🌟" : quote >= 50 ? "👍" : "💪";
+  const text = quote === 100 ? "Alles beim ersten Mal gewusst!" : quote >= 80 ? "Richtig gut!" : quote >= 50 ? "Gut gemacht – weiter so!" : "Dranbleiben lohnt sich!";
+  app.innerHTML = `
+    <div class="card center">
+      <div class="confetti">${emoji}</div>
+      <h2 style="font-size:1.5rem">${text}</h2>
+      <div class="stats">
+        <div class="stat"><b style="color:var(--ok)">${r.richtig}</b><span>sofort gewusst</span></div>
+        <div class="stat"><b style="color:var(--bad)">${r.falsch}</b><span>nochmal geübt</span></div>
+        <div class="stat"><b>${quote}%</b><span>Trefferquote</span></div>
+      </div>
+      ${faelligeWoerter().length && !r.freiwillig ? `<p class="muted">Es warten noch ${faelligeWoerter().length} Vokabeln.</p>` : ""}
+      <div class="row">
+        ${faelligeWoerter().length ? `<button class="btn" id="mehr">Weiterlernen</button>` : ""}
+        <button class="btn ghost" id="start">Zur Übersicht</button>
+      </div>
+    </div>`;
+  document.getElementById("start").onclick = () => show("start");
+  const m = document.getElementById("mehr");
+  if (m) m.onclick = () => starteRunde(false);
+  runde = null;
+}
+
+/* ---- Kartei ---- */
+function zeigeKartei() {
+  app.innerHTML = alleLektionen().map(l => `
+    <div class="card">
+      <h2>${esc(l.titel)}</h2>
+      <table>
+        <tr><th>Englisch</th><th>Deutsch</th><th>Phase</th><th>Wieder dran</th></tr>
+        ${l.woerter.map(w => {
+          const k = karte(wortId(l, w));
+          const t = tageBis(k.faellig);
+          const wann = k.phase === 7 ? "–" : t <= 0 ? "heute" : t === 1 ? "morgen" : `in ${t} Tagen`;
+          return `<tr><td><button class="speak" style="font-size:1rem" data-sp="${esc(w.en)}">🔊</button> ${esc(w.en)}</td>
+            <td>${esc(w.de)}</td>
+            <td><span class="dot" style="background:${PHASE_FARBE(k.phase)}">${k.phase === 7 ? "✓" : k.phase}</span></td>
+            <td class="muted">${wann}</td></tr>`;
+        }).join("")}
+      </table>
+    </div>`).join("");
+  app.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => sprich(b.dataset.sp));
+}
+
+/* ---- Eigene Wörter ---- */
+function zeigeEigene() {
+  app.innerHTML = `
+    <div class="card">
+      <h2>Eigene Vokabel hinzufügen</h2>
+      <p class="muted" style="margin-top:0">Mehrere richtige Bedeutungen mit Komma trennen, z. B. <i>gut, schön</i>.</p>
+      <form id="neu" autocomplete="off">
+        <div class="grid2">
+          <input type="text" id="en" placeholder="Englisch, z. B. school" required>
+          <input type="text" id="de" placeholder="Deutsch, z. B. Schule" required>
+        </div>
+        <button class="btn" type="submit">Hinzufügen</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Meine Wörter (${state.eigene.length})</h2>
+      ${state.eigene.length ? `<table><tr><th>Englisch</th><th>Deutsch</th><th></th></tr>
+        ${state.eigene.map((w, i) => `<tr><td>${esc(w.en)}</td><td>${esc(w.de)}</td>
+          <td><button class="btn ghost" style="padding:4px 10px" data-del="${i}">✕</button></td></tr>`).join("")}</table>`
+        : `<p class="muted">Noch keine eigenen Wörter.</p>`}
+    </div>`;
+  document.getElementById("neu").onsubmit = ev => {
+    ev.preventDefault();
+    const en = document.getElementById("en").value.trim(), de = document.getElementById("de").value.trim();
+    if (!en || !de) return;
+    if (state.eigene.some(w => w.en === en)) return alert("Dieses Wort gibt es schon.");
+    const split = s => s.split(/[,/]/).map(x => x.trim()).filter(Boolean);
+    state.eigene.push({ en, de, enOk: split(en), deOk: split(de) });
+    if (!aktiveLektionen().includes("eigene")) state.aktiv.push("eigene");
+    speichern(); zeigeEigene();
+    document.getElementById("en").focus();
+  };
+  app.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    const w = state.eigene[+b.dataset.del];
+    if (!confirm(`„${w.en}“ löschen?`)) return;
+    delete state.karten["eigene::" + w.en];
+    state.eigene.splice(+b.dataset.del, 1);
+    speichern(); zeigeEigene();
+  });
+}
+
+/* ---- Einstellungen ---- */
+function zeigeEinstellungen() {
+  app.innerHTML = `
+    <div class="card">
+      <h2>Abfragerichtung</h2>
+      ${[["de-en", "Deutsch → Englisch (empfohlen, wie in der Klassenarbeit)"], ["en-de", "Englisch → Deutsch"], ["mix", "Gemischt"]]
+        .map(([v, t]) => `<label class="opt"><input type="radio" name="r" value="${v}" ${state.richtung === v ? "checked" : ""}> ${t}</label>`).join("")}
+    </div>
+    <div class="card">
+      <h2>Neue Vokabeln</h2>
+      <label class="opt"><input type="checkbox" id="nz" ${state.neuZeigen ? "checked" : ""}> Neue Vokabeln vor der ersten Abfrage mit Übersetzung zeigen</label>
+      <p class="muted" style="margin:0;font-size:.9rem">Ausgeschaltet beginnt sofort die Abfrage. Gut, wenn die Wörter schon aus dem Unterricht bekannt sind.</p>
+    </div>
+    <div class="card">
+      <h2>Ton</h2>
+      <label class="opt"><input type="checkbox" id="vl" ${state.vorlesen ? "checked" : ""}> Englische Wörter automatisch vorlesen</label>
+    </div>
+    <div class="card">
+      <h2>Lernstand sichern</h2>
+      <p class="muted" style="margin-top:0">Der Lernstand wird nur in diesem Browser gespeichert. Mit einer Sicherung kannst du ihn auf ein anderes Gerät mitnehmen.</p>
+      <div class="row">
+        <button class="btn ghost" id="exp">⬇ Sicherung herunterladen</button>
+        <button class="btn ghost" id="imp">⬆ Sicherung laden</button>
+      </div>
+      <input type="file" id="datei" accept=".json" hidden>
+    </div>
+    <div class="card">
+      <h2>Neu anfangen</h2>
+      <button class="btn bad" id="reset">Alle Vokabeln zurück in Phase 1</button>
+    </div>
+    <div class="card">
+      <h2>So funktioniert's</h2>
+      <p class="muted" style="margin:0">Jede Vokabel wandert durch 6 Phasen. Weißt du sie, rückt sie eine Phase vor und kommt erst nach einer Pause wieder:
+      Phase 2 nach 1 Tag, Phase 3 nach 2 Tagen, Phase 4 nach 5, Phase 5 nach 10 und Phase 6 nach 30 Tagen.
+      Danach ist sie im Langzeitgedächtnis. Weißt du sie nicht, geht sie zurück in Phase 1 und kommt sofort nochmal.
+      Am besten jeden Tag 10 Minuten üben!</p>
+    </div>`;
+  app.querySelectorAll("[name=r]").forEach(r => r.onchange = () => { state.richtung = r.value; speichern(); });
+  document.getElementById("vl").onchange = e => { state.vorlesen = e.target.checked; speichern(); };
+  document.getElementById("nz").onchange = e => { state.neuZeigen = e.target.checked; speichern(); };
+  document.getElementById("exp").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }));
+    a.download = `vokabeltrainer-${heute()}.json`; a.click();
+  };
+  const datei = document.getElementById("datei");
+  document.getElementById("imp").onclick = () => datei.click();
+  datei.onchange = async () => {
+    try {
+      const daten = JSON.parse(await datei.files[0].text());
+      if (!daten.karten) throw 0;
+      state = Object.assign(state, daten); speichern(); alert("Lernstand geladen!"); show("start");
+    } catch { alert("Diese Datei konnte nicht gelesen werden."); }
+  };
+  document.getElementById("reset").onclick = () => {
+    if (!confirm("Wirklich alles zurücksetzen? Der Lernfortschritt geht verloren.")) return;
+    state.karten = {}; state.serie = 0; state.letzterTag = null; state.heuteGelernt = 0;
+    speichern(); show("start");
+  };
+}
+
+if ("speechSynthesis" in window) speechSynthesis.getVoices();
+show("start");
+</script>
+</body>
+</html>
