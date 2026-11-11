@@ -1,6 +1,6 @@
 # Vokabel-Trainer (5. Klasse, Englisch)
 
-Vokabeltrainer nach dem 6-Phasen-Prinzip. Läuft ohne Installation: einfach `index.html` im Browser öffnen.
+Vokabeltrainer nach dem 6-Phasen-Prinzip. Läuft ohne Installation: einfach `index.html` im Browser öffnen!
 
 ## So funktioniert's
 - Jede Vokabel startet in **Phase 1**. Neue Wörter werden zuerst gezeigt („Neue Vokabel“), danach abgefragt.
